@@ -1,0 +1,87 @@
+\documentclass{article}
+\usepackage[citestyle=authoryear,bibstyle=numeric]{biblatex}
+\addbibresource{example.bib}
+
+
+\ExplSyntaxOn
+
+\cs_new:Npn \BibAuthorInfo #1#2
+{
+    \DeclareBibliographyCategory{#1}
+    \addtocategory{#1}{#2}
+}
+
+\clist_new:N \g_bibinfo_all_authors_clist
+\clist_new:N \l_bibinfo_tmp_clist
+\cs_new:Npn \BibAllAuthors #1
+{
+    \clist_gset:Nn \g_bibinfo_all_authors_clist {#1}
+}
+
+
+\bool_new:N \l_bibinfo_start_found_bool
+\bool_new:N \l_bibinfo_end_found_bool
+\bool_new:N \l_bibinfo_loop_end_bool
+\tl_new:N \l_bibinfo_tmpa_tl
+\tl_new:N \l_bibinfo_tmpb_tl
+\tl_new:N \l_bibinfo_tmpc_tl
+\cs_new:Npn \PrintBibBetween #1#2
+{
+    \clist_set_eq:NN \l_bibinfo_tmp_clist \g_bibinfo_all_authors_clist
+    \bool_set_false:N \l_bibinfo_start_found_bool
+    \bool_set_false:N \l_bibinfo_end_found_bool
+    \bool_set:Nn \l_bibinfo_loop_end_bool {\clist_if_empty_p:N \l_bibinfo_tmp_clist}
+
+    \bool_until_do:nn {\l_bibinfo_loop_end_bool}
+    {
+        \clist_pop:NN \l_bibinfo_tmp_clist \l_bibinfo_tmpa_tl
+        \exp_args:NV \str_if_eq:nnT  \l_bibinfo_tmpa_tl {#1}
+        {
+            \bool_set_true:N \l_bibinfo_start_found_bool
+        }
+        \exp_args:NV \str_if_eq:nnT \l_bibinfo_tmpa_tl {#2}
+        {
+            \bool_set_true:N \l_bibinfo_end_found_bool
+        }
+        \bool_if:nT {\l_bibinfo_start_found_bool}
+        {
+            \tl_set:Nx \l_bibinfo_tmpc_tl {\exp_not:N\printbibliography[category={\l_bibinfo_tmpa_tl},heading=none]}
+            \tl_use:N \l_bibinfo_tmpc_tl
+        }
+        \bool_set:Nn \l_bibinfo_loop_end_bool {\clist_if_empty_p:N \l_bibinfo_tmp_clist || \l_bibinfo_end_found_bool}
+    }
+
+    \bool_if:nF {\l_bibinfo_start_found_bool}
+    {
+        \GenericError{}{Cannot found bib start item "#1"}{}{}
+    }
+
+    \bool_if:nF {\l_bibinfo_end_found_bool}
+    {
+        \GenericError{}{Cannot found bib end item "#2"}{}{}
+    }
+}
+
+
+\ExplSyntaxOff
+
+
+% make sure --shell-escape is enabled (if you want this process to be done automatically when compiling in LaTeX)
+% call Python script to process bibliography files
+% if there are more than one file, append to the argument list
+\immediate\write18{python3 bib_categorizer.py \jobname-bibinfo.tex example.bib}
+% load the generate file
+\input{\jobname-bibinfo.tex}
+
+\begin{document}
+
+Is is working?
+
+\nocite{*}
+
+\PrintBibBetween{ito-keith}{kabir-mohsin-muhammad}
+
+
+\end{document}
+
+
